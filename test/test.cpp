@@ -41,6 +41,18 @@ bool testFrameBufferConstructor() {
     }
     ofs.close();
     std::cout << "Test finished. Check the result...";
+
+    FrameBuffer fb_copy(fb);
+    UNIT_TEST(fb_copy.getWidth() == w, "Width mismatch");
+    UNIT_TEST(fb_copy.getHeight() == h, "Height mismatch");
+    UNIT_TEST(fb_copy.getChannels() == ch, "Channels mismatch");
+    UNIT_TEST(fb_copy.getData() != nullptr, "Data pointer is null");
+
+    fb_copy = fb;
+    UNIT_TEST(fb_copy.getWidth() == w, "Width mismatch");
+    UNIT_TEST(fb_copy.getHeight() == h, "Height mismatch");
+    UNIT_TEST(fb_copy.getChannels() == ch, "Channels mismatch");
+    UNIT_TEST(fb_copy.getData() != nullptr, "Data pointer is null");
     return true;
 }
 
@@ -66,7 +78,7 @@ bool testColorMatrix() {
     }
     FrameBuffer fb(mockData, w, h, ch);
     applyTransformation(fb, cm);
-    std::ofstream ofs("test_output.ppm");
+    std::ofstream ofs("test_output2.ppm");
     ofs << "P3\n" << fb.getWidth() << " " << fb.getHeight() << "\n255\n";
     uint8_t* dataPtr = fb.getData();
     for (size_t i = 0; i < fb.getWidth()*fb.getHeight()*fb.getChannels(); i+=fb.getChannels()) {
