@@ -4,6 +4,7 @@
 #include "../include/FrameBuffer.hpp"
 #include "../include/ColorMatrix.hpp"
 #include "../include/Engine.hpp"
+#include "../include/VideoReader.hpp"
 
 #define UNIT_TEST(condition, message) \
     do { \
@@ -89,6 +90,50 @@ bool testColorMatrix() {
     return true;
 }
 
+bool testVideoReader() {
+    std::string filename = "output.mp4";
+    int fourcc = cv::VideoWriter::fourcc('M','P','4','V');
+    double fps = 30.0;
+    cv::Size frameSize(640, 480);
+    bool isColor = true;
+
+    cv::VideoWriter writer(filename, fourcc, fps, frameSize, isColor);
+    if (!writer.isOpened())
+        throw std::runtime_error("Cannot open the file!");
+    cv::Mat frame(480, 640, CV_8UC3, cv::Scalar(255, 0, 0));
+    for (size_t i = 0; i < 5; ++i)
+        writer.write(frame);
+
+    writer.release();
+
+    VideoReader video("output.mp4");
+    int frameCount = 0;
+    while (std::optional<FrameBuffer> optFrame = video.getNextFrame()) {
+        FrameBuffer& currentFrame = *optFrame;
+        ++frameCount;
+
+        const uint8_t* data = currentFrame.getData();
+        UNIT_TEST(data[0] < 50, "Red channel should be 0!");
+        UNIT_TEST(data[1] < 50, "Green channel should be 0!");
+        UNIT_TEST(data[2] > 200, "Blue channel should be 255!");
+
+        float m_data[20] = {
+            1, 1, 1, 1, 0,
+            0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0
+        };
+        ColorMatrix matrix(m_data);
+        applyTransformation(currentFrame, matrix);
+        UNIT_TEST(data[0] > 200, "Red channel should be 255 after transform");
+        UNIT_TEST(data[1] < 50, "Green channel should be 0 after transform");
+        UNIT_TEST(data[2] < 50, "Blue channel should be 0 after transform");
+    }
+    UNIT_TEST(frameCount == 5, "VideoReader should read exactly 5 frames");
+    std::remove(filename.c_str());
+    return true;
+}
+
 void runAllTests() {
     std::cout << "Running tests!\n";
 
@@ -104,6 +149,7 @@ void runAllTests() {
     };
     runTest(testFrameBufferConstructor, "Init Frame Buffer");
     runTest(testColorMatrix, "Color Matrix and Transformation");
+    runTest(testVideoReader, "Video Reader");
     std::cout << "Results: " << passed << " / " << total << "\n";
 }
 
